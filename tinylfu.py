@@ -5,10 +5,25 @@ from slru import SLRUCache
 import math
 
 
-# 0 for lru, 1 for slru probation, 2 for slru protect
-class TinyLFUEntry:
-    def __init__(self, key, value, expire_time, on_evict, list_id):
-        pass
+def TinyLFUCache(cache_size=128, sample_size=100000, false_positive=0.0001):
+    def decorator(func):
+        # print("excute  \"{}\"  decorate".format(func.__name__))
+        t = TinyLFU(size=cache_size,
+                    sample=sample_size,
+                    false_positive=false_positive)
+
+        def search(*args, **kargs):
+            key = ''.join(args)
+            if key in t:
+                return t.get(key)
+            else:
+                result = func(*args, **kargs)
+                t.set(key, result)
+                return result
+
+        return search
+
+    return decorator
 
 
 class TinyLFU:
@@ -31,6 +46,9 @@ class TinyLFU:
             slru20_size = 1
         self.slru = SLRUCache(probation_cap=slru20_size,
                               protect_cap=slru_size - slru20_size)
+
+    def __contains__(self, key) -> bool:
+        return key in self.lru or key in self.slru
 
     def get(self, key: str):
         # for tinylfu aging, reset only admission

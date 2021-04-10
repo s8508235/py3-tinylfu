@@ -70,3 +70,17 @@ def test_tinylfu():
     assert t.get("c") == None
     assert t.get("f") == "6"
     # print(t.lru.queue, t.slru.probation_queue, t.slru.protect_queue)
+
+
+def test_tinylfu_cache():
+    @tinylfu.TinyLFUCache(cache_size=3)
+    def my_getter(key: str):
+        if len(key) == 1:
+            return ord(key)
+        else:
+            return None
+
+    assert my_getter("abc") == None
+    assert my_getter("a") == 97
+    assert my_getter("b") == 98
+    assert my_getter("a") == 97

@@ -15,6 +15,9 @@ class LRUCache:
     def __len__(self):
         return len(self.queue)
 
+    def __contains__(self, key) -> bool:
+        return key in self.queue
+
     def set(self, key: str, value) -> Tuple[str, object, bool]:
         if key not in self.hash_map:
             if self.is_queue_full():
