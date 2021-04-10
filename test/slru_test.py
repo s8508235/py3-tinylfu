@@ -27,6 +27,7 @@ def test_slru_size_2_1():
     c.set("1", 2)
     assert len(c.protect_queue) == 0
     assert len(c.probation_queue) == 1
+    assert c.victim() == None
     # test if go to protect queue
     assert c.get("1") == 2
     assert len(c) == 1
@@ -57,4 +58,4 @@ def test_slru_size_2_1():
     assert c.protect_hash_map["3"] == 4
     assert c.probation_hash_map.keys() == {"1", "2"}
     # test if order is right
-    assert c.pop() == "1"
+    assert c.victim() == "1"

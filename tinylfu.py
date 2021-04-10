@@ -2,6 +2,7 @@ from cm4 import CM4
 from doorkeeper import Doorkeeper
 from lru import LRUCache
 from slru import SLRUCache
+import math
 
 
 # 0 for lru, 1 for slru probation, 2 for slru protect
@@ -17,21 +18,22 @@ class TinyLFU:
         self.counter = CM4(size)
         self.doorkeeper = Doorkeeper(sample, false_positive)
 
-        # percentage is recommend from https://arxiv.org/abs/1512.00727
+        # percentage from https://arxiv.org/abs/1512.00727
         lru_percent = 1
         lru_size = (lru_percent * size) / 100
         if lru_size < 1:
             lru_size = 1
         self.lru = LRUCache(cache_size=lru_size)
 
-        slru_size = ((100.0 - lru_percent) / 100.0) * size
-        slru20_size = int(slru_size * 0.2)
+        slru_size = math.ceil(((100.0 - lru_percent) / 100.0) * size)
+        slru20_size = math.ceil(slru_size * 0.2)
         if slru20_size < 1:
             slru20_size = 1
         self.slru = SLRUCache(probation_cap=slru20_size,
                               protect_cap=slru_size - slru20_size)
 
     def get(self, key: str):
+        # for tinylfu aging, reset only admission
         self.__age += 1
         if self.__age == self.__sample:
             self.counter.reset()
@@ -51,12 +53,15 @@ class TinyLFU:
             return value
 
     def set(self, key: str, value):
+        if key in self.slru:
+            self.slru.remove(key)
+
         old_key, old_value, evicted = self.lru.set(key, value)
         if not evicted:
             return
-        victim_key = self.slru.pop()
+        victim_key = self.slru.victim()
         if victim_key == None:
-            self.slru.set(key, value)
+            self.slru.set(old_key, old_value)
             return
 
         if not self.doorkeeper.allow(old_key):

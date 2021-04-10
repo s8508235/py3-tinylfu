@@ -16,11 +16,13 @@ class SLRUCache:
     def __len__(self) -> int:
         return len(self.protect_queue) + len(self.probation_queue)
 
-    def pop(self) -> str:
+    def __contains__(self, key) -> bool:
+        return key in self.probation_hash_map or key in self.protect_hash_map
+
+    def victim(self) -> str:
         if len(self) < (self.protect_cap + self.probation_cap):
             return None
-        victim_key = self.probation_queue.pop()
-        self.probation_hash_map.pop(victim_key)
+        victim_key = self.probation_queue[-1]
         return victim_key
 
     def get(self, key: str) -> object:
@@ -56,7 +58,7 @@ class SLRUCache:
             self.probation_hash_map[key] = value
             return
         if key not in self.probation_hash_map:
-            self.pop()
+            self.remove(self.victim())
         else:
             self.probation_queue.remove(key)
         self.probation_queue.appendleft(key)

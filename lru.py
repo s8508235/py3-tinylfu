@@ -22,7 +22,7 @@ class LRUCache:
                 old_value = self.hash_map.pop(old_key)
                 self.queue.appendleft(key)
                 self.hash_map[key] = value
-                return old_key, old_value, True
+                return old_key, old_value, True if key != old_key else False
             else:
                 self.queue.appendleft(key)
                 self.hash_map[key] = value
@@ -39,7 +39,7 @@ class LRUCache:
             self.queue.appendleft(key)
             return self.hash_map[key]
 
-    def remove(self, key:str) -> object:
+    def remove(self, key: str) -> object:
         if key in self.hash_map:
             self.queue.remove(key)
             return self.hash_map.pop(key)
