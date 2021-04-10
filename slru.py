@@ -61,3 +61,11 @@ class SLRUCache:
             self.probation_queue.remove(key)
         self.probation_queue.appendleft(key)
         self.probation_hash_map[key] = value
+
+    def remove(self, key: str) -> object:
+        if key in self.probation_hash_map:
+            self.probation_queue.remove(key)
+            return self.probation_hash_map.pop(key)
+        if key in self.protect_hash_map:
+            self.protect_queue.remove(key)
+            return self.protect_hash_map.pop(key)
