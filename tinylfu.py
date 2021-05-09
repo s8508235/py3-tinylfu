@@ -3,24 +3,38 @@ from doorkeeper import Doorkeeper
 from lru import LRUCache
 from slru import SLRUCache
 import math
+import functools
+import time
 
 
 def TinyLFUCache(cache_size=128, sample_size=100000, false_positive=0.0001):
     def decorator(func):
-        # print("excute  \"{}\"  decorate".format(func.__name__))
         t = TinyLFU(size=cache_size,
                     sample=sample_size,
                     false_positive=false_positive)
 
         def search(*args, **kargs):
-            key = ''.join(args)
+
+            key = str(functools._make_key(args, kargs, True))
             if key in t:
+                search.__hits += 1
+                start = time.time()
+                value = t.get(key)
+                end = time.time()
+                timeit = int(end * 1000000 - start * 1000000)
                 return t.get(key)
             else:
+                search.__misses += 1
                 result = func(*args, **kargs)
+                start = time.time()
                 t.set(key, result)
+                end = time.time()
+                timeit = int(end * 1000000 - start * 1000000)
                 return result
 
+        search.__hits = search.__misses = 0
+        search.cache_info = lambda: functools._CacheInfo(
+            search.__hits, search.__misses, cache_size, len(t))
         return search
 
     return decorator
@@ -32,7 +46,8 @@ class TinyLFU:
         self.__sample = sample
         self.counter = CM4(size)
         self.doorkeeper = Doorkeeper(sample, false_positive)
-
+        if size <= 1:
+            size = 2
         # percentage from https://arxiv.org/abs/1512.00727
         lru_percent = 1
         lru_size = (lru_percent * size) / 100
@@ -46,6 +61,9 @@ class TinyLFU:
             slru20_size = 1
         self.slru = SLRUCache(probation_cap=slru20_size,
                               protect_cap=slru_size - slru20_size)
+
+    def __len__(self) -> int:
+        return len(self.lru) + len(self.slru)
 
     def __contains__(self, key) -> bool:
         return key in self.lru or key in self.slru
