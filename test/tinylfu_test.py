@@ -9,6 +9,9 @@ import tinylfu
 
 def test_tinylfu():
     t = tinylfu.TinyLFU(size=3)
+    assert t.lru.cache_size == 1
+    assert t.slru.probation_cap == 1
+    assert t.slru.protect_cap == 2
     # test if same key in different cache entry
     t.set("a", 1)  # a
     assert t.get("a") == 1
@@ -19,13 +22,22 @@ def test_tinylfu():
     assert t.get("a") == 1
     assert len(t.slru) == 1
     assert len(t.lru) == 1
+    assert t.slru.protect.cache.keys() == {"a"}
+    assert t.lru.cache.keys() == {"b"}
     t.set("a", "1")  # a / b
     assert len(t.slru) == 1
     assert len(t.lru) == 1
     assert t.get("a") == "1"
+    assert t.lru.cache.keys() == {"a"}
+    assert t.slru.probation.cache.keys() == {"b"}
+    assert t.get("b") == 2
     t.set("c", 3)  # c / a -> b
+    assert t.lru.cache.keys() == {"c"}
+    assert t.slru.probation.cache.keys() == {"a"}
+    assert t.slru.protect.cache.keys() == {"b"}
     assert len(t.slru) == 2
     assert len(t.lru) == 1
+    assert t.get("a") == "1"
     # fill out cache
     t.set("d", 4)  # d / c -> a b
     assert t.get("c") == 3
@@ -69,7 +81,6 @@ def test_tinylfu():
     t.set("g", "7")  # g / f -> a b
     assert t.get("c") == None
     assert t.get("f") == "6"
-    # print(t.lru.queue, t.slru.probation_queue, t.slru.protect_queue)
 
 
 def test_tinylfu_cache():
